@@ -44,7 +44,6 @@ EXPECTED_BACKEND_ROUTES = {
     ("GET", "/api/get_teacher_info/"),
     ("POST", "/profile/update_info/"),
     ("POST", "/profile/update_teacher_school/"),
-    ("POST", "/profile/request_school_change/"),
     ("POST", "/profile/update_teacher_name/"),
     ("POST", "/profile/update_wishlist/"),
     ("POST", "/profile/update_url_id/"),
@@ -60,7 +59,6 @@ EXPECTED_BACKEND_ROUTES = {
     ("POST", "/validation/delete_user/{user_email}"),
     ("POST", "/validation/report_user/{user_email}"),
     ("POST", "/validation/emailed_user/{user_email}"),
-    ("POST", "/validation/school_change/{request_id}/{decision}"),
     ("POST", "/admin/generate_teacher_report/"),
     ("POST", "/profile/delete/"),
 }

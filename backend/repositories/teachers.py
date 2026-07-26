@@ -1,4 +1,4 @@
-from sqlalchemy import String, cast, func, or_, select
+from sqlalchemy import String, cast, func, select
 
 
 class TeacherDirectoryRepository:
@@ -15,9 +15,6 @@ class TeacherDirectoryRepository:
             self._teacher_model.url_id.is_not(None),
             cast(self._teacher_model.url_id, String) != "",
         ]
-        pending = getattr(self._teacher_model, "school_change_pending", None)
-        if pending is not None:
-            conditions.append(or_(pending.is_(None), pending == 0))
         if state:
             conditions.append(cast(self._teacher_model.state, String) == state)
         if county:

@@ -21,22 +21,6 @@ class TeacherUrlIdConflict(ConflictError):
     """Raised when a teacher URL ID is already assigned to a profile."""
 
 
-class SchoolVerificationRequired(ConflictError):
-    """Raised when approved school details are changed without re-verification."""
-
-
-class SchoolChangeConfirmationRequired(BadRequestError):
-    """Raised when a school-change request is submitted without confirmation."""
-
-
-class InvalidSchoolChange(BadRequestError):
-    """Raised when a proposed school is not in the approved school catalog."""
-
-
-class SchoolChangeAlreadyPending(ConflictError):
-    """Raised when a teacher already has a school-change request under review."""
-
-
 class InvalidWishlistUrl(BadRequestError):
     """Raised when a wishlist URL cannot be normalized safely."""
 
@@ -89,47 +73,7 @@ class ProfileMutationService:
     def __init__(self, repository):
         self._repository = repository
 
-    def _get_verified_registration(self, user_id, *, db=None):
-        getter = getattr(self._repository, "get_verified_registration", None)
-        if getter is None:
-            return None
-        try:
-            return getter(user_id, db=db)
-        except TypeError:
-            return getter(user_id)
-
-    def _enforce_verified_school(
-        self, user_id, *, state, county, district, school, db=None
-    ):
-        registration = self._get_verified_registration(user_id, db=db)
-        if not registration:
-            return
-        expected = {
-            "state": registration["registration_state"],
-            "county": registration["registration_county"],
-            "district": registration["registration_district"],
-            "school": registration["registration_school"],
-        }
-        submitted = {
-            "state": state,
-            "county": county,
-            "district": district,
-            "school": school,
-        }
-        if submitted != expected:
-            raise SchoolVerificationRequired(
-                "School information was verified during registration. "
-                "Contact support to request a school change."
-            )
-
     def update_teacher_school(self, user_id, *, state, county, district, school):
-        self._enforce_verified_school(
-            user_id,
-            state=state,
-            county=county,
-            district=district,
-            school=school,
-        )
         self._repository.update_teacher_school(
             user_id,
             state=state,
@@ -137,80 +81,6 @@ class ProfileMutationService:
             district=district,
             school=school,
         )
-
-    def request_teacher_school_change(
-        self,
-        user_id,
-        *,
-        state,
-        county,
-        district,
-        school,
-        confirmed,
-    ):
-        if not confirmed:
-            raise SchoolChangeConfirmationRequired(
-                "Confirm that you understand your profile will be removed from "
-                "public and search results until the new school is reapproved."
-            )
-
-        proposed = {
-            "state": state,
-            "county": county,
-            "district": district,
-            "school": school,
-        }
-        with self._repository.transaction() as db:
-            teacher = self._repository.get_teacher_by_user_id(user_id, db=db)
-            registration = self._get_verified_registration(user_id, db=db)
-            if teacher is None or registration is None:
-                raise SchoolVerificationRequired(
-                    "A verified school record is required before requesting a school change."
-                )
-
-            old = {
-                "state": teacher.state,
-                "county": teacher.county,
-                "district": teacher.district,
-                "school": teacher.school,
-            }
-            verified = {
-                "state": registration["registration_state"],
-                "county": registration["registration_county"],
-                "district": registration["registration_district"],
-                "school": registration["registration_school"],
-            }
-            if old != verified:
-                raise SchoolVerificationRequired(
-                    "The current profile does not match its verified school record. "
-                    "Contact support before requesting another school change."
-                )
-            if old == proposed:
-                raise InvalidSchoolChange("Choose a different school for the requested change.")
-            if not self._repository.school_exists(**proposed, db=db):
-                raise InvalidSchoolChange(
-                    "The proposed school could not be verified in the school directory."
-                )
-            if (
-                teacher.school_change_pending
-                or self._repository.get_pending_school_change(user_id, db=db) is not None
-            ):
-                raise SchoolChangeAlreadyPending(
-                    "A school change is already awaiting review."
-                )
-
-            self._repository.create_school_change_request(
-                user_id,
-                old_state=old["state"],
-                old_county=old["county"],
-                old_district=old["district"],
-                old_school=old["school"],
-                proposed_state=state,
-                proposed_county=county,
-                proposed_district=district,
-                proposed_school=school,
-                db=db,
-            )
 
     def update_teacher_name(self, user_id, name):
         self._repository.update_teacher_name(user_id, name)
@@ -285,15 +155,6 @@ class ProfileMutationService:
             )
             if create_count != 0 and role != "admin":
                 return False
-
-            self._enforce_verified_school(
-                user_id,
-                state=state,
-                county=county,
-                district=district,
-                school=school,
-                db=db,
-            )
 
             first_part_email = email.split("@")[0]
             auto_url_id = f"{first_part_email}{secrets.randbelow(9999)}"

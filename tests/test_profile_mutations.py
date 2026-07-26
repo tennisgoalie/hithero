@@ -11,7 +11,6 @@ from backend.services.profile_mutations import (
     InvalidTeacherImage,
     InvalidTeacherUrlId,
     ProfileMutationService,
-    SchoolVerificationRequired,
     TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
@@ -250,33 +249,6 @@ def test_profile_mutation_service_preserves_existing_profile_guard():
     assert not hasattr(repository, "profile_create")
 
 
-def test_profile_mutation_service_enforces_verified_school_details(monkeypatch):
-    repository = RecordingRepository()
-    repository.get_verified_registration = lambda _user_id, **_values: {
-        "registration_name": "Approved Teacher",
-        "registration_state": "WA",
-        "registration_county": "King",
-        "registration_district": "Seattle Public Schools",
-        "registration_school": "Lincoln High School",
-    }
-    service = ProfileMutationService(repository)
-
-    with pytest.raises(SchoolVerificationRequired):
-        service.create_teacher_profile(
-            42,
-            "teacher",
-            "teacher@example.test",
-            name="Approved Teacher",
-            state="WA",
-            county="King",
-            district="Seattle Public Schools",
-            school="Roosevelt High School",
-            about_me="Science supplies",
-            wishlist="https://example.test/list",
-        )
-
-    assert not hasattr(repository, "profile_create")
-
 
 class MimeResult:
     def __init__(self, mime=None, mime_type=None):
@@ -452,7 +424,7 @@ def test_profile_creation_commits_once_and_closes_on_success(app_module):
     )
 
     assert created is True
-    assert session.execute_count == 5
+    assert session.execute_count == 4
     assert session.commit_count == 1
     assert session.rollback_count == 0
     assert session.close_count == 1

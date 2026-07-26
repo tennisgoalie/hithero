@@ -17,11 +17,7 @@ from backend.services.profile_mutations import (
     InvalidWishlistUrl,
     InvalidTeacherImage,
     InvalidTeacherUrlId,
-    InvalidSchoolChange,
     ProfileMutationService,
-    SchoolChangeAlreadyPending,
-    SchoolChangeConfirmationRequired,
-    SchoolVerificationRequired,
     TeacherImageTooLarge,
     TeacherUrlIdConflict,
 )
@@ -56,7 +52,6 @@ def create_profile_router(
     detect_file_type,
     max_file_size,
     school_model,
-    school_change_model,
     profile_response_model,
     logger,
 ):
@@ -68,7 +63,6 @@ def create_profile_router(
         pending_user_model=pending_user_model,
         reset_token_model=reset_token_model,
         school_model=school_model,
-        school_change_model=school_change_model,
     )
     profile_auth_service = ProfileAuthService(profile_repository)
     profile_password_service = ProfilePasswordService(profile_repository)
@@ -194,8 +188,6 @@ def create_profile_router(
                     )
                 }
             return {"message": "Teacher created successfully", "role": role}
-        except SchoolVerificationRequired as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
         except InvalidWishlistUrl:
             raise HTTPException(status_code=400, detail=INVALID_WISHLIST_URL_MESSAGE)
         except Exception as exc:
@@ -209,17 +201,11 @@ def create_profile_router(
         user_id: str = Depends(get_current_id),
     ):
         if email:
-            profile_prefill = None
-            if user_id:
-                profile_prefill = profile_read_service.get_verified_registration(
-                    int(user_id)
-                )
             return JSONResponse(
                 content={
                     "user_id": user_id,
                     "user_role": role,
                     "user_email": email,
-                    "profile_prefill": profile_prefill,
                 }
             )
         raise HTTPException(status_code=404, detail="No user logged in.")
@@ -298,44 +284,6 @@ def create_profile_router(
                     "message": "School information updated successfully."
                 }
             )
-        except SchoolVerificationRequired as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-        except Exception as exc:
-            logger.error(f"Internal Server Error: {str(exc)}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-
-    @router.post("/profile/request_school_change/")
-    async def request_school_change(
-        request: Request,
-        state: str = Form(...),
-        county: str = Form(...),
-        district: str = Form(...),
-        school: str = Form(...),
-        confirm_school_change: str = Form("false"),
-        user_id: int = Depends(get_current_id),
-        role: str = Depends(get_current_role),
-    ):
-        require_teacher_or_admin(
-            role,
-            detail="Permission denied. Not logged in.",
-        )
-        require_profile_owner(user_id, detail="Permission denied. Not logged in.")
-        try:
-            profile_mutation_service.request_teacher_school_change(
-                user_id,
-                state=state,
-                county=county,
-                district=district,
-                school=school,
-                confirmed=confirm_school_change.lower() == "true",
-            )
-            return {"message": "School change submitted for reapproval."}
-        except SchoolChangeConfirmationRequired as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
-        except (InvalidSchoolChange, SchoolChangeAlreadyPending) as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
-        except SchoolVerificationRequired as exc:
-            raise HTTPException(status_code=409, detail=str(exc))
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")

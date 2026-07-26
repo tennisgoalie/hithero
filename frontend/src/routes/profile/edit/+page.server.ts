@@ -3,7 +3,6 @@ import { serverApiFetch } from '$lib/server/api';
 import { normalizeStringOptions } from '$lib/api/options';
 import { actionErrorMessage, formMessage } from '$lib/server/form-actions';
 import { error, fail, redirect } from '@sveltejs/kit';
-import type { ProfilePrefill } from '$lib/api/types';
 import type { Actions, PageServerLoad } from './$types';
 
 type ApiMessage = { detail?: string; message?: string };
@@ -26,10 +25,6 @@ type TeacherProfile = {
 	url_id?: string | null;
 };
 
-type BackendProfile = {
-	profile_prefill?: ProfilePrefill | null;
-};
-
 const mergeOptions = (primary: string[], selected: string): string[] =>
 	Array.from(new Set([selected, ...primary].filter(Boolean))).sort();
 
@@ -50,19 +45,6 @@ export const load: PageServerLoad = async ({ fetch, request, url }) => {
 		teacherInfo = await serverApiFetch<TeacherProfile>(event, '/api/current_teacher/');
 	} catch (loadError) {
 		console.error('Unable to load optional teacher profile details', loadError);
-	}
-
-	let schoolVerified = false;
-	try {
-		const profile = await serverApiFetch<BackendProfile>(event, '/api/profile/');
-		schoolVerified = Boolean(
-			profile.profile_prefill?.state &&
-			profile.profile_prefill?.county &&
-			profile.profile_prefill?.district &&
-			profile.profile_prefill?.school
-		);
-	} catch (loadError) {
-		console.error('Unable to load profile verification status', loadError);
 	}
 
 	const state = teacherInfo.state || myInfo.state || '';
@@ -115,8 +97,7 @@ export const load: PageServerLoad = async ({ fetch, request, url }) => {
 			school
 		},
 		schoolOptions: { states, counties, districts, schools },
-		schoolOptionsUnavailable,
-		schoolVerified
+		schoolOptionsUnavailable
 	};
 };
 
@@ -149,12 +130,6 @@ export const actions: Actions = {
 		updateProfileSection(event, '/profile/update_teacher_name/', 'Name updated.'),
 	updateSchool: (event) =>
 		updateProfileSection(event, '/profile/update_teacher_school/', 'School information updated.'),
-	requestSchoolChange: (event) =>
-		updateProfileSection(
-			event,
-			'/profile/request_school_change/',
-			'School change submitted for reapproval.'
-		),
 	updateInfo: (event) => updateProfileSection(event, '/profile/update_info/', 'Info updated.'),
 	updateWishlist: (event) =>
 		updateProfileSection(event, '/profile/update_wishlist/', 'Wishlist updated.'),

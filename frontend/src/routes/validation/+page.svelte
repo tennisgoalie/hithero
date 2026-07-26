@@ -6,13 +6,12 @@
 	import { apiFetch } from '$lib/api/client';
 	import { routes } from '$lib/routes';
 	import type { PageData } from './$types';
-	import type { SchoolChange, ValidationUser } from './+page.server';
+	import type { ValidationUser } from './+page.server';
 
 	type StatusVariant = 'info' | 'success' | 'warning' | 'error';
 	type StatusMessage = { variant: StatusVariant; message: string };
 	type ValidationListResponse = {
 		new_users: ValidationUser[];
-		school_changes: SchoolChange[];
 		role: 'admin' | 'teacher';
 	};
 
@@ -22,22 +21,18 @@
 		'rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:flex sm:items-start sm:justify-between sm:gap-5';
 
 	let users = $state<ValidationUser[]>([]);
-	let schoolChanges = $state<SchoolChange[]>([]);
 	let role = $state<'admin' | 'teacher'>('teacher');
 	let status = $state<StatusMessage | null>(null);
 	let busyEmail = $state<string | null>(null);
-	let busyChangeId = $state<number | null>(null);
 
 	$effect(() => {
 		users = data.new_users;
-		schoolChanges = data.school_changes ?? [];
 		role = data.role;
 	});
 
 	async function refreshList() {
 		const body = await apiFetch<ValidationListResponse>('/api/validation_list/');
 		users = body.new_users;
-		schoolChanges = body.school_changes ?? [];
 		role = body.role;
 	}
 
@@ -111,34 +106,6 @@
 		);
 	}
 
-	function reviewSchoolChange(change: SchoolChange, decision: 'approved' | 'rejected') {
-		const action = decision;
-		if (
-			!window.confirm(
-				`${decision === 'approved' ? 'Approve' : 'Reject'} this school change? The request will be marked ${decision}.`
-			)
-		) {
-			return;
-		}
-		busyChangeId = change.id;
-		status = { variant: 'info', message: 'Updating school-change review...' };
-		void apiFetch<{ message?: string }>(`/validation/school_change/${change.id}/${action}`, {
-			method: 'POST'
-		})
-			.then(async (body) => {
-				await refreshList();
-				status = { variant: 'success', message: body.message || 'School change reviewed.' };
-			})
-			.catch((error) => {
-				status = {
-					variant: 'error',
-					message: error instanceof Error ? error.message : 'The school-change review failed.'
-				};
-			})
-			.finally(() => {
-				busyChangeId = null;
-			});
-	}
 </script>
 
 <Seo
@@ -168,65 +135,6 @@
 				validate the information present, press the green Validate button. If you believe someone
 				signed up with fake information, report the user and we will investigate.
 			</p>
-			</section>
-
-			<section aria-labelledby="school-change-list-heading">
-				<h2
-					id="school-change-list-heading"
-					class="text-3xl font-bold tracking-normal text-green-800"
-				>
-					School Change Requests
-				</h2>
-
-				<ul id="schoolChangeList" class="mt-5 space-y-4">
-					{#each schoolChanges as change (change.id)}
-						<li class={cardClass}>
-							<div class="space-y-3 text-slate-800">
-								<p class="text-lg font-semibold">Teacher account {change.user_id}</p>
-								<div class="grid gap-3 text-sm md:grid-cols-2">
-									<div class="rounded-md bg-slate-50 p-3">
-										<p class="font-semibold text-slate-950">Current verified school</p>
-										<p class="mt-1 leading-6">
-											{change.old.school} · {change.old.district} · {change.old.county}, {change.old.state}
-										</p>
-									</div>
-									<div class="rounded-md bg-amber-50 p-3">
-										<p class="font-semibold text-amber-950">Proposed new school</p>
-										<p class="mt-1 leading-6 text-amber-950">
-											{change.proposed.school} · {change.proposed.district} · {change.proposed.county}, {change.proposed.state}
-										</p>
-									</div>
-								</div>
-							</div>
-
-							<div class="mt-4 flex flex-wrap gap-2 sm:mt-0 sm:justify-end">
-								<Button
-									type="button"
-									size="sm"
-									disabled={busyChangeId === change.id}
-									onclick={() => reviewSchoolChange(change, 'approved')}
-								>
-									Approve
-								</Button>
-								<Button
-									type="button"
-									size="sm"
-									variant="secondary"
-									disabled={busyChangeId === change.id}
-									onclick={() => reviewSchoolChange(change, 'rejected')}
-								>
-									Reject
-								</Button>
-							</div>
-						</li>
-					{/each}
-				</ul>
-
-				{#if schoolChanges.length === 0}
-					<p class="mt-5 rounded-lg border border-slate-200 bg-white p-8 text-center text-slate-700">
-						No school-change requests need review right now.
-					</p>
-				{/if}
 			</section>
 
 			{#if status}

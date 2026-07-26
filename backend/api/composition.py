@@ -27,7 +27,6 @@ from backend.db.models import (
     PostVote,
     RegisteredUsers,
     School,
-    SchoolChangeRequest,
     Spotlight,
     TeacherList,
 )
@@ -96,7 +95,6 @@ def register_application_routes(
         registered_user_model=RegisteredUsers,
         teacher_model=TeacherList,
         school_model=School,
-        school_change_model=SchoolChangeRequest,
         reset_token_model=PasswordResetToken,
         get_current_id=get_current_id,
         get_current_role=get_current_role,
@@ -119,7 +117,6 @@ def register_application_routes(
         pending_user_model=NewUsers,
         registered_user_model=RegisteredUsers,
         teacher_model=TeacherList,
-        school_change_model=SchoolChangeRequest,
         get_current_id=get_current_id,
         get_current_role=get_current_role,
         set_teacher_session=set_teacher_session,

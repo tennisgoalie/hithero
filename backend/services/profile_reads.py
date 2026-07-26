@@ -61,18 +61,6 @@ class ProfileReadService:
             "image_data": image_data,
         }
 
-    def get_verified_registration(self, user_id):
-        registration = self._repository.get_verified_registration(user_id)
-        if registration is None:
-            return None
-        return {
-            "name": registration["registration_name"],
-            "state": registration["registration_state"],
-            "county": registration["registration_county"],
-            "district": registration["registration_district"],
-            "school": registration["registration_school"],
-        }
-
     def has_teacher_access(self, context, user_id, role):
         if role != "teacher":
             return False

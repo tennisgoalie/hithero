@@ -15,28 +15,8 @@ export type ValidationUser = {
 	emailed: number;
 };
 
-export type SchoolChange = {
-	id: number;
-	user_id: number;
-	old: {
-		state: string;
-		county: string;
-		district: string;
-		school: string;
-	};
-	proposed: {
-		state: string;
-		county: string;
-		district: string;
-		school: string;
-	};
-	status: string;
-	created_at: string | null;
-};
-
 type ValidationListResponse = {
 	new_users: ValidationUser[];
-	school_changes: SchoolChange[];
 	role: 'admin' | 'teacher';
 };
 

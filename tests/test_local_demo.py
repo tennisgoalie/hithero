@@ -29,11 +29,6 @@ def test_local_demo_bootstrap_creates_schema_and_seed_data_idempotently(tmp_path
         try:
             assert db.execute(select(func.count()).select_from(School)).scalar_one() >= 100
             assert db.execute(select(func.count()).select_from(TeacherList)).scalar_one() == 50
-            assert db.execute(
-                select(func.count()).select_from(TeacherList).where(
-                    TeacherList.school_change_pending.in_((None, 0))
-                )
-            ).scalar_one() == 50
         finally:
             db.close()
     finally:

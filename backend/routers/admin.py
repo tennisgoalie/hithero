@@ -10,9 +10,6 @@ from backend.core.policies import require_admin, require_teacher_or_admin
 from backend.services.admin import (
     AdminService,
     PendingUserNotFound,
-    SchoolChangeAlreadyReviewed,
-    SchoolChangeRequestNotFound,
-    SchoolChangeStale,
     UserAccountNotFound,
     ValidationScopeForbidden,
 )
@@ -24,7 +21,6 @@ def create_admin_router(
     pending_user_model,
     registered_user_model,
     teacher_model,
-    school_change_model,
     get_current_id,
     get_current_role,
     set_teacher_session,
@@ -40,7 +36,6 @@ def create_admin_router(
         registered_user_model=registered_user_model,
         teacher_model=teacher_model,
         pending_user_model=pending_user_model,
-        school_change_model=school_change_model,
     )
     admin_service = AdminService(account_repository)
 
@@ -55,29 +50,6 @@ def create_admin_router(
                 "phone_number": row.phone_number,
                 "report": row.report,
                 "emailed": row.emailed,
-            }
-            for row in rows
-        ]
-
-    def serialize_school_change_requests(rows):
-        return [
-            {
-                "id": row.id,
-                "user_id": row.user_id,
-                "old": {
-                    "state": row.old_state,
-                    "county": row.old_county,
-                    "district": row.old_district,
-                    "school": row.old_school,
-                },
-                "proposed": {
-                    "state": row.proposed_state,
-                    "county": row.proposed_county,
-                    "district": row.proposed_district,
-                    "school": row.proposed_school,
-                },
-                "status": row.status,
-                "created_at": row.created_at.isoformat() if row.created_at else None,
             }
             for row in rows
         ]
@@ -126,7 +98,7 @@ def create_admin_router(
             detail="You don't have permission to access this page.",
         )
         try:
-            teacher, new_users, school_changes = admin_service.get_validation_users(
+            teacher, new_users = admin_service.get_validation_users(
                 role=role,
                 user_id=user_id,
             )
@@ -134,7 +106,6 @@ def create_admin_router(
                 set_teacher_session(request, teacher)
             return {
                 "new_users": serialize_pending_users(new_users),
-                "school_changes": serialize_school_change_requests(school_changes),
                 "role": role,
             }
         except Exception as exc:
@@ -204,43 +175,6 @@ def create_admin_router(
         except Exception as exc:
             logger.error(f"Internal Server Error: {str(exc)}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-
-    async def review_school_change(
-        request_id: int,
-        request: Request,
-        decision: str,
-        role: str = Depends(get_current_role),
-    ):
-        require_teacher_or_admin(role, detail="Access denied.")
-        if decision not in {"approved", "rejected"}:
-            raise HTTPException(status_code=400, detail="Invalid school-change decision.")
-        try:
-            admin_service.review_school_change(
-                request_id,
-                role=role,
-                current_user_id=get_current_id(request),
-                decision=decision,
-            )
-            message = "School change approved." if decision == "approved" else "School change rejected."
-            return {"message": message}
-        except SchoolChangeRequestNotFound:
-            raise HTTPException(status_code=404, detail="School-change request not found.")
-        except (SchoolChangeAlreadyReviewed, SchoolChangeStale):
-            raise HTTPException(status_code=409, detail="School-change request is no longer current.")
-        except (ValidationScopeForbidden, ForbiddenError):
-            raise HTTPException(
-                status_code=403,
-                detail="You can only review school changes in your own district.",
-            )
-        except Exception as exc:
-            logger.error(f"Internal Server Error: {str(exc)}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
-
-    router.add_api_route(
-        "/validation/school_change/{request_id}/{decision}",
-        review_school_change,
-        methods=["POST"],
-    )
 
     @router.post("/admin/generate_teacher_report/")
     async def generate_teacher_report(

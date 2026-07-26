@@ -30,11 +30,7 @@ def seed_sitemap_teachers(app_module):
         db.add_all(
             [
                 app_module.TeacherList(name="Public Teacher", url_id="public-teacher"),
-                app_module.TeacherList(
-                    name="Pending Teacher",
-                    url_id="pending-teacher",
-                    school_change_pending=1,
-                ),
+                app_module.TeacherList(name="Pending Teacher", url_id="pending-teacher"),
                 app_module.TeacherList(name=None, url_id="missing-name"),
                 app_module.TeacherList(name="Missing URL", url_id=None),
                 app_module.TeacherList(name="Empty URL", url_id=""),
@@ -70,6 +66,7 @@ def test_site_router_serves_public_asset_contracts(app_module):
     }
     assert locations == EXPECTED_SITEMAP_LOCS | {
         "https://www.helpteachers.net/teacher/public-teacher",
+        "https://www.helpteachers.net/teacher/pending-teacher",
     }
     assert b"lastmod" not in sitemap.content
 

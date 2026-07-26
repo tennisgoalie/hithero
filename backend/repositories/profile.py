@@ -15,7 +15,6 @@ class ProfileRepository:
         pending_user_model=None,
         reset_token_model=None,
         school_model=None,
-        school_change_model=None,
     ):
         self._session_factory = session_factory
         self._teacher_model = teacher_model
@@ -23,7 +22,6 @@ class ProfileRepository:
         self._pending_user_model = pending_user_model
         self._reset_token_model = reset_token_model
         self._school_model = school_model
-        self._school_change_model = school_change_model
 
     @contextmanager
     def transaction(self):
@@ -89,36 +87,6 @@ class ProfileRepository:
             return result[0] if result else None
         finally:
             db.close()
-
-    def get_verified_registration(self, user_id, *, db=None):
-        """Return the registration snapshot approved for a user, if present."""
-        fields = (
-            "registration_name",
-            "registration_state",
-            "registration_county",
-            "registration_district",
-            "registration_school",
-        )
-        if not all(hasattr(self._registered_user_model, field) for field in fields):
-            return None
-
-        owns_session = db is None
-        if owns_session:
-            db = self._session_factory()
-        try:
-            columns = [getattr(self._registered_user_model, field) for field in fields]
-            result = db.execute(
-                select(*columns).where(self._registered_user_model.id == user_id)
-            ).fetchone()
-            if not result:
-                return None
-            values = dict(zip(fields, result))
-            if not all(values.values()):
-                return None
-            return values
-        finally:
-            if owns_session:
-                db.close()
 
     def get_pending_user_by_email(self, email):
         db = self._session_factory()
@@ -276,74 +244,6 @@ class ProfileRepository:
                 ).first()
                 is not None
             )
-        finally:
-            if owns_session:
-                db.close()
-
-    def get_pending_school_change(self, user_id, *, db=None):
-        if self._school_change_model is None:
-            return None
-        owns_session = db is None
-        if owns_session:
-            db = self._session_factory()
-        try:
-            return db.execute(
-                select(self._school_change_model)
-                .where(
-                    self._school_change_model.user_id == user_id,
-                    cast(self._school_change_model.status, String) == "pending",
-                )
-                .order_by(self._school_change_model.id.desc())
-            ).scalars().first()
-        finally:
-            if owns_session:
-                db.close()
-
-    def create_school_change_request(
-        self,
-        user_id,
-        *,
-        old_state,
-        old_county,
-        old_district,
-        old_school,
-        proposed_state,
-        proposed_county,
-        proposed_district,
-        proposed_school,
-        db=None,
-    ):
-        if self._school_change_model is None:
-            raise RuntimeError("School change persistence is not configured")
-        owns_session = db is None
-        if owns_session:
-            db = self._session_factory()
-        try:
-            request = self._school_change_model(
-                user_id=user_id,
-                old_state=old_state,
-                old_county=old_county,
-                old_district=old_district,
-                old_school=old_school,
-                proposed_state=proposed_state,
-                proposed_county=proposed_county,
-                proposed_district=proposed_district,
-                proposed_school=proposed_school,
-                status="pending",
-            )
-            db.add(request)
-            db.execute(
-                update(self._teacher_model)
-                .where(self._teacher_model.regUserID == user_id)
-                .values(school_change_pending=1)
-            )
-            if owns_session:
-                db.commit()
-            return request
-        except Exception:
-            if owns_session:
-                db.rollback()
-            raise
         finally:
             if owns_session:
                 db.close()

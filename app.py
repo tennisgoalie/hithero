@@ -27,7 +27,6 @@ from backend.db.models import (
     PostVote,
     RegisteredUsers,
     School,
-    SchoolChangeRequest,
     TeacherList,
 )
 from backend.db.session import (
@@ -76,7 +75,6 @@ __all__ = [
     "RegisteredUsers",
     "SQLALCHEMY_DATABASE_URL",
     "School",
-    "SchoolChangeRequest",
     "SessionLocal",
     "StaticPool",
     "TeacherList",

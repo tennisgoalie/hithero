@@ -115,7 +115,6 @@ def register_profile_routes(
     detect_file_type,
     max_file_size,
     school_model,
-    school_change_model,
     profile_response_model,
     logger,
 ):
@@ -139,7 +138,6 @@ def register_profile_routes(
             detect_file_type=detect_file_type,
             max_file_size=max_file_size,
             school_model=school_model,
-            school_change_model=school_change_model,
             profile_response_model=profile_response_model,
             logger=logger,
         )
@@ -153,7 +151,6 @@ def register_admin_routes(
     pending_user_model,
     registered_user_model,
     teacher_model,
-    school_change_model,
     get_current_id,
     get_current_role,
     set_teacher_session,
@@ -169,7 +166,6 @@ def register_admin_routes(
             pending_user_model=pending_user_model,
             registered_user_model=registered_user_model,
             teacher_model=teacher_model,
-            school_change_model=school_change_model,
             get_current_id=get_current_id,
             get_current_role=get_current_role,
             set_teacher_session=set_teacher_session,

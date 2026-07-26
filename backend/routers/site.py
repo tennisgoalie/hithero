@@ -123,7 +123,6 @@ def create_site_router(
                     == cast(data.district, String),
                     cast(teacher_model.school, String)
                     == cast(data.school, String),
-                    teacher_model.school_change_pending == 0,
                 ),
             ).fetchone()
             if not teacher_row:
@@ -164,10 +163,7 @@ def create_site_router(
         db = session_factory()
         try:
             teacher_info = db.execute(
-                select(teacher_model).where(
-                    cast(teacher_model.url_id, String) == url_id,
-                    teacher_model.school_change_pending == 0,
-                ),
+                select(teacher_model).where(cast(teacher_model.url_id, String) == url_id),
             ).fetchone()
             if not teacher_info:
                 return RedirectResponse(url="/404")

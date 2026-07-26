@@ -324,11 +324,6 @@ def test_validate_user_api_preserves_scope_and_promotion_contract(app_module):
             email="pending-validation@example.test"
         ).one()
         assert registered.createCount == 0
-        assert registered.registration_name == "Pending Teacher"
-        assert registered.registration_state == "WA"
-        assert registered.registration_county == "King"
-        assert registered.registration_district == "Seattle Public Schools"
-        assert registered.registration_school == "Roosevelt High School"
     finally:
         db.close()
 
@@ -395,7 +390,6 @@ def test_admin_validation_list_serializes_pending_model_rows(app_module):
             }
         ],
         "role": "admin",
-        "school_changes": [],
     }
 
 
